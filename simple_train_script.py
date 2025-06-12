@@ -43,7 +43,7 @@ def check_dataset():
     return dataset_path
 
 def main():
-    print("🚀 SOLIDWORKS Scada StarCoder2 Fine-tuning")
+    print("🚀 Scada Scada StarCoder2 Fine-tuning")
     print("=" * 50)
     
     # Check requirements
@@ -74,13 +74,13 @@ def main():
     print("\n🔥 Starting training...")
     print("This will take several hours depending on your GPU and dataset size.")
     
-    from solidworks_starcoder2_finetuner import SolidWorksScadaFineTuner
+    from Scada_starcoder2_finetuner import ScadaScadaFineTuner
     
     # Initialize fine-tuner
-    fine_tuner = SolidWorksScadaFineTuner(
+    fine_tuner = ScadaScadaFineTuner(
         model_name="bigcode/starcoder2-15b",
         dataset_path=dataset_path,
-        output_dir="solidworks-starcoder2-Scada"
+        output_dir="Scada-starcoder2-Scada"
     )
     
     try:
@@ -92,9 +92,9 @@ def main():
         
         # Test with sample prompts
         test_prompts = [
-            "Create a Scada macro to open a SOLIDWORKS part file and get its mass properties",
+            "Create a Scada macro to open a Scada part file and get its mass properties",
             "Write Scada code to create a circular sketch and extrude it into a cylinder",
-            "Generate a macro to iterate through all features in a SOLIDWORKS part"
+            "Generate a macro to iterate through all features in a Scada part"
         ]
         
         print("\n" + "=" * 60)
@@ -112,7 +112,7 @@ def main():
             print("-" * 60)
         
         print("\n✅ Fine-tuning complete!")
-        print(f"Model saved to: solidworks-starcoder2-Scada/")
+        print(f"Model saved to: Scada-starcoder2-Scada/")
         print("\nTo use your model:")
         print("1. Load it using the inference script")
         print("2. Or upload to Hugging Face Hub for easy sharing")
