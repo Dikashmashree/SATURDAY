@@ -1,8 +1,4 @@
- #!/usr/bin/env python3
-"""
-Simple script to fine-tune StarCoder2-15B for SOLIDWORKS VBA
-Based on the approach from https://huggingface.co/Sayan18/finetune_starcoder2
-"""
+
 
 import os
 import sys
@@ -29,7 +25,7 @@ def check_requirements():
 
 def check_dataset():
     """Check if dataset exists"""
-    dataset_path = "solidworks_dataset/solidworks_vba_enhanced.json"
+    dataset_path = "scada_dataset/scada_enhanced.json"
     if not Path(dataset_path).exists():
         print(f"Dataset not found at {dataset_path}")
         print("Please run the dataset creation script first.")
@@ -47,7 +43,7 @@ def check_dataset():
     return dataset_path
 
 def main():
-    print("🚀 SOLIDWORKS VBA StarCoder2 Fine-tuning")
+    print("🚀 SOLIDWORKS Scada StarCoder2 Fine-tuning")
     print("=" * 50)
     
     # Check requirements
@@ -78,13 +74,13 @@ def main():
     print("\n🔥 Starting training...")
     print("This will take several hours depending on your GPU and dataset size.")
     
-    from solidworks_starcoder2_finetuner import SolidWorksVBAFineTuner
+    from solidworks_starcoder2_finetuner import SolidWorksScadaFineTuner
     
     # Initialize fine-tuner
-    fine_tuner = SolidWorksVBAFineTuner(
+    fine_tuner = SolidWorksScadaFineTuner(
         model_name="bigcode/starcoder2-15b",
         dataset_path=dataset_path,
-        output_dir="solidworks-starcoder2-vba"
+        output_dir="solidworks-starcoder2-Scada"
     )
     
     try:
@@ -96,8 +92,8 @@ def main():
         
         # Test with sample prompts
         test_prompts = [
-            "Create a VBA macro to open a SOLIDWORKS part file and get its mass properties",
-            "Write VBA code to create a circular sketch and extrude it into a cylinder",
+            "Create a Scada macro to open a SOLIDWORKS part file and get its mass properties",
+            "Write Scada code to create a circular sketch and extrude it into a cylinder",
             "Generate a macro to iterate through all features in a SOLIDWORKS part"
         ]
         
@@ -116,7 +112,7 @@ def main():
             print("-" * 60)
         
         print("\n✅ Fine-tuning complete!")
-        print(f"Model saved to: solidworks-starcoder2-vba/")
+        print(f"Model saved to: solidworks-starcoder2-Scada/")
         print("\nTo use your model:")
         print("1. Load it using the inference script")
         print("2. Or upload to Hugging Face Hub for easy sharing")
