@@ -8,24 +8,15 @@ import subprocess
 from bs4 import BeautifulSoup
 import pandas as pd
 
-class SolidWorksVBADatasetCreator:
-    def __init__(self, output_dir: str = "solidworks_dataset"):
+class DatasetCreator:
+    def __init__(self, output_dir: str = "scada_dataset"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
         self.dataset = []
+       
+        self.extensions = ['.bas', '.frm', '.cls', , '.swp']
         
-        # VBA file extensions to look for
-        self.vba_extensions = ['.bas', '.frm', '.cls', '.vba', '.swp']
-        
-    def clone_repositories(self):
-        """Clone key GitHub repositories containing SOLIDWORKS VBA code"""
-        repos = [
-            "https://github.com/xarial/codestack.git",
-            "https://github.com/BlueByteSystemsInc/SOLIDWORKSVBAMacros.git",
-            "https://github.com/YuanRayChang/Solidworks_Macro_Tutorial.git",
-            "https://github.com/codestackdev/solidworks-api-examples.git"
-        ]
-        
+
         for repo_url in repos:
             repo_name = repo_url.split('/')[-1].replace('.git', '')
             repo_path = self.output_dir / "repos" / repo_name
@@ -41,25 +32,23 @@ class SolidWorksVBADatasetCreator:
                     "git", "-C", str(repo_path), "pull"
                 ], capture_output=True)
     
-    def extract_vba_code_from_files(self, directory: Path) -> List[Dict]:
-        """Extract VBA code from files in directory"""
-        vba_files = []
+    def extract_from_files(self, directory: Path) -> List[Dict]:
+        """Extract from files in directory"""
+        files = []
         
-        for ext in self.vba_extensions:
-            vba_files.extend(directory.rglob(f"*{ext}"))
-        
-        # Also look for .txt and .md files that might contain VBA code
+        for ext in self.extensions:
+            files.extend(directory.rglob(f"*{ext}"))
+    
         text_files = list(directory.rglob("*.txt")) + list(directory.rglob("*.md"))
         
         extracted_code = []
         
-        for file_path in vba_files + text_files:
+        for file_path in files + text_files:
             try:
                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                     content = f.read()
                     
-                # Check if content contains VBA code patterns
-                if self.is_vba_code(content):
+                if self.is_code(content):
                     extracted_code.append({
                         'file_path': str(file_path),
                         'content': content,
@@ -71,38 +60,30 @@ class SolidWorksVBADatasetCreator:
                 
         return extracted_code
     
-    def is_vba_code(self, content: str) -> bool:
-        """Check if content contains VBA code patterns"""
-        vba_patterns = [
+    def grid(self, content: str) -> bool:
+        """Check if content contains patterns"""
+        patterns = [
             r'Sub\s+\w+\(',
             r'Function\s+\w+\(',
             r'Dim\s+\w+\s+As\s+',
-            r'Set\s+\w+\s*=',
-            r'swApp\.',
-            r'SldWorks\.',
-            r'ModelDoc2',
-            r'FeatureManager',
-            r'SelectionMgr'
+            r'Set\s+\w+\s*='
         ]
         
-        return any(re.search(pattern, content, re.IGNORECASE) for pattern in vba_patterns)
+        return any(re.search(pattern, content, re.IGNORECASE) for pattern in patterns)
     
-    def extract_code_blocks_from_markdown(self, content: str) -> List[str]:
-        """Extract VBA code blocks from markdown content"""
-        # Pattern for code blocks with vba, vb, or no language specified
-        code_block_pattern = r'```(?:vba|vb|basic)?\s*\n(.*?)\n```'
+    def extract_blocks_from_markdown(self, content: str) -> List[str]:
+        """Extract blocks from markdown content""
         matches = re.findall(code_block_pattern, content, re.DOTALL | re.IGNORECASE)
-        
-        # Filter matches that look like VBA code
-        vba_blocks = []
+    
+        blocks = []
         for match in matches:
-            if self.is_vba_code(match):
-                vba_blocks.append(match.strip())
+            if self.is_code(match):
+                blocks.append(match.strip())
                 
-        return vba_blocks
+        return blocks
     
     def create_instruction_pairs(self, code_content: str, file_path: str) -> List[Dict]:
-        """Create instruction-response pairs from VBA code"""
+        """Create instruction-response pairs fromcode"""
         pairs = []
         
         # Extract comments that might describe what the code does
@@ -115,9 +96,9 @@ class SolidWorksVBADatasetCreator:
         
         # Create basic instruction pairs
         if comments:
-            main_description = ' '.join(comments[:3])  # Use first 3 comments as description
+            main_description = ' '.join(comments[:3])  
             pairs.append({
-                'instruction': f"Create a VBA macro that {main_description.lower()}",
+                'instruction': f"Create that {main_description.lower()}",
                 'response': code_content,
                 'source_file': file_path,
                 'type': 'comment_based'
@@ -125,7 +106,7 @@ class SolidWorksVBADatasetCreator:
         
         # Create function-specific pairs
         for func_name in functions:
-            instruction = f"Write a VBA function called {func_name} for SOLIDWORKS"
+            instruction = f"Write a function called {func_name} for SOLIDWORKS"
             
             # Extract just this function's code
             func_pattern = rf'(?:Sub|Function)\s+{re.escape(func_name)}\s*\(.*?End\s+(?:Sub|Function)'
@@ -141,53 +122,6 @@ class SolidWorksVBADatasetCreator:
         
         return pairs
     
-    def enhance_with_synthetic_data(self):
-        """Create synthetic instruction-response pairs for common SOLIDWORKS operations"""
-        synthetic_pairs = [
-            {
-                'instruction': "Create a VBA macro to open a SOLIDWORKS file",
-                'response': '''Sub OpenFile()
-    Dim swApp As SldWorks.SldWorks
-    Dim swModel As SldWorks.ModelDoc2
-    Dim fileName As String
-    
-    Set swApp = Application.SldWorks
-    fileName = "C:\\temp\\part1.sldprt"
-    
-    Set swModel = swApp.OpenDoc6(fileName, swDocumentTypes_e.swDocPART, _
-                                swOpenDocOptions_e.swOpenDocOptions_Silent, "", 0, 0)
-    
-    If swModel Is Nothing Then
-        MsgBox "Failed to open file"
-    End If
-End Sub''',
-                'source_file': 'synthetic',
-                'type': 'synthetic'
-            },
-            {
-                'instruction': "Write VBA code to create a sketch circle in SOLIDWORKS",
-                'response': '''Sub CreateSketchCircle()
-    Dim swApp As SldWorks.SldWorks
-    Dim swModel As SldWorks.ModelDoc2
-    Dim swSketchMgr As SldWorks.SketchManager
-    
-    Set swApp = Application.SldWorks
-    Set swModel = swApp.ActiveDoc
-    Set swSketchMgr = swModel.SketchManager
-    
-    ' Insert sketch
-    swModel.InsertSketch2 True
-    
-    ' Create circle at origin with radius 0.05
-    swSketchMgr.CreateCircleByRadius 0, 0, 0, 0.05
-    
-    ' Exit sketch
-    swModel.InsertSketch2 True
-End Sub''',
-                'source_file': 'synthetic',
-                'type': 'synthetic'
-            }
-        ]
         
         for pair in synthetic_pairs:
             self.dataset.append(pair)
@@ -196,29 +130,11 @@ End Sub''',
         """Main method to build the complete dataset"""
         print("Starting dataset creation...")
         
-        # Step 1: Clone repositories
-        self.clone_repositories()
-        
-        # Step 2: Extract VBA code from repositories
-        repos_dir = self.output_dir / "repos"
-        for repo_dir in repos_dir.iterdir():
-            if repo_dir.is_dir():
-                print(f"Processing repository: {repo_dir.name}")
-                vba_files = self.extract_vba_code_from_files(repo_dir)
-                
-                for vba_file in vba_files:
-                    # Create instruction pairs from the code
-                    pairs = self.create_instruction_pairs(
-                        vba_file['content'], 
-                        vba_file['file_path']
-                    )
-                    self.dataset.extend(pairs)
-                    
-                    # Also extract code blocks from markdown files
-                    if vba_file['file_path'].endswith('.md'):
-                        code_blocks = self.extract_code_blocks_from_markdown(vba_file['content'])
+       
+                    if file['file_path'].endswith('.md'):
+                        code_blocks = self.extract_code_blocks_from_markdown(file['content'])
                         for block in code_blocks:
-                            block_pairs = self.create_instruction_pairs(block, vba_file['file_path'])
+                            block_pairs = self.create_instruction_pairs(block, file['file_path'])
                             self.dataset.extend(block_pairs)
         
         # Step 3: Add synthetic data
@@ -232,12 +148,12 @@ End Sub''',
     def save_dataset(self):
         """Save dataset in multiple formats"""
         # Save as JSON
-        with open(self.output_dir / "solidworks_vba_dataset.json", 'w') as f:
+        with open(self.output_dir / "scada_dataset.json", 'w') as f:
             json.dump(self.dataset, f, indent=2)
         
         # Save as CSV for easy inspection
         df = pd.DataFrame(self.dataset)
-        df.to_csv(self.output_dir / "solidworks_vba_dataset.csv", index=False)
+        df.to_csv(self.output_dir / "scada_dataset.csv", index=False)
         
         # Save in Hugging Face datasets format
         hf_format = []
@@ -246,15 +162,15 @@ End Sub''',
                 'text': f"### Instruction:\n{item['instruction']}\n\n### Response:\n{item['response']}"
             })
         
-        with open(self.output_dir / "solidworks_vba_dataset_hf.json", 'w') as f:
+        with open(self.output_dir / "scada_dataset_hf.json", 'w') as f:
             json.dump(hf_format, f, indent=2)
         
         print(f"Dataset saved to {self.output_dir}")
-        print(f"- JSON format: solidworks_vba_dataset.json")
-        print(f"- CSV format: solidworks_vba_dataset.csv") 
-        print(f"- HuggingFace format: solidworks_vba_dataset_hf.json")
+        print(f"- JSON format: scada_dataset.json")
+        print(f"- CSV format: scada_dataset.csv") 
+        print(f"- HuggingFace format: scada_dataset_hf.json")
 
 # Usage
 if __name__ == "__main__":
-    creator = SolidWorksVBADatasetCreator()
+    creator = ScadaDatasetCreator()
     creator.build_dataset()
